@@ -13,6 +13,7 @@ type Confirm struct {
 	Message string
 	Default bool
 	Help    string
+	AddSudo bool
 }
 
 // data available to the templates when processing
@@ -75,6 +76,17 @@ func (c *Confirm) getBool(showHelp bool) (bool, error) {
 		case val == "":
 			answer = c.Default
 		case val == "S":
+			if len(c.Message) > 4 && c.Message[:4] == "sudo" {
+				err := c.Render(
+					ConfirmQuestionTemplate,
+					ConfirmTemplateData{Confirm: *c, Sudo: showSudo},
+				)
+				if err != nil {
+					// use the default value and bubble up
+					return c.Default, err
+				}
+				continue
+			}
 			err := c.Render(
 				ConfirmQuestionTemplate,
 				ConfirmTemplateData{Confirm: *c, Sudo: !showSudo},
@@ -84,6 +96,7 @@ func (c *Confirm) getBool(showHelp bool) (bool, error) {
 				return c.Default, err
 			}
 			showSudo = !showSudo
+			c.AddSudo = showSudo
 			continue
 		case val == string(core.HelpInputRune) && c.Help != "":
 			err := c.Render(
@@ -110,6 +123,9 @@ func (c *Confirm) getBool(showHelp bool) (bool, error) {
 				return c.Default, err
 			}
 			continue
+		}
+		if c.AddSudo {
+			c.Message = "sudo " + c.Message
 		}
 		return answer, nil
 	}
