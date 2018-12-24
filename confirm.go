@@ -20,12 +20,14 @@ type ConfirmTemplateData struct {
 	Confirm
 	Answer   string
 	ShowHelp bool
+	Sudo     bool
 }
 
 // Templates with Color formatting. See Documentation: https://github.com/mgutz/ansi#style-format
 var ConfirmQuestionTemplate = `
 {{- if .ShowHelp }}{{- color "cyan"}}{{ HelpIcon }} {{ .Help }}{{color "reset"}}{{"\n"}}{{end}}
 {{- color "green+hb"}}{{ QuestionIcon }} {{color "reset"}}
+{{- if .Sudo }}{{- color "red"}}sudo {{color "reset"}}{{end}}
 {{- color "default+hb"}}{{ .Message }} {{color "reset"}}
 {{- if .Answer}}
   {{- color "cyan"}}{{.Answer}}{{color "reset"}}{{"\n"}}
@@ -52,7 +54,7 @@ func (c *Confirm) getBool(showHelp bool) (bool, error) {
 	rr := c.NewRuneReader()
 	rr.SetTermMode()
 	defer rr.RestoreTermMode()
-
+	var showSudo bool
 	// start waiting for input
 	for {
 		line, err := rr.ReadLine(0)
@@ -72,6 +74,17 @@ func (c *Confirm) getBool(showHelp bool) (bool, error) {
 			answer = false
 		case val == "":
 			answer = c.Default
+		case val == "S":
+			err := c.Render(
+				ConfirmQuestionTemplate,
+				ConfirmTemplateData{Confirm: *c, Sudo: !showSudo},
+			)
+			if err != nil {
+				// use the default value and bubble up
+				return c.Default, err
+			}
+			showSudo = !showSudo
+			continue
 		case val == string(core.HelpInputRune) && c.Help != "":
 			err := c.Render(
 				ConfirmQuestionTemplate,
