@@ -28,7 +28,7 @@ type ConfirmTemplateData struct {
 var ConfirmQuestionTemplate = `
 {{- if .ShowHelp }}{{- color "cyan"}}{{ HelpIcon }} {{ .Help }}{{color "reset"}}{{"\n"}}{{end}}
 {{- color "green+hb"}}{{ QuestionIcon }} {{color "reset"}}
-{{- if .Sudo }}{{- color "red"}}sudo {{color "reset"}}{{end}}
+{{- if .Sudo }}{{- color "yellow"}}sudo {{color "reset"}}{{end}}
 {{- color "default+hb"}}{{ .Message }} {{color "reset"}}
 {{- if .Answer}}
   {{- color "cyan"}}{{.Answer}}{{color "reset"}}{{"\n"}}
