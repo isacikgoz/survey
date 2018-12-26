@@ -21,14 +21,13 @@ type ConfirmTemplateData struct {
 	Confirm
 	Answer   string
 	ShowHelp bool
-	Sudo     bool
+	ShowSudo bool
 }
 
 // Templates with Color formatting. See Documentation: https://github.com/mgutz/ansi#style-format
 var ConfirmQuestionTemplate = `
 {{- if .ShowHelp }}{{- color "cyan"}}{{ HelpIcon }} {{ .Help }}{{color "reset"}}{{"\n"}}{{end}}
 {{- color "green+hb"}}{{ QuestionIcon }} {{color "reset"}}
-{{- if .Sudo }}{{- color "yellow"}}sudo {{color "reset"}}{{end}}
 {{- color "default+hb"}}{{ .Message }} {{color "reset"}}
 {{- if .Answer}}
   {{- color "cyan"}}{{.Answer}}{{color "reset"}}{{"\n"}}
@@ -39,8 +38,9 @@ var ConfirmQuestionTemplate = `
 
 // the regex for answers
 var (
-	yesRx = regexp.MustCompile("^(?i:y(?:es)?)$")
-	noRx  = regexp.MustCompile("^(?i:n(?:o)?)$")
+	yesRx  = regexp.MustCompile("^(?i:y(?:es)?)$")
+	sudoRx = regexp.MustCompile("^(?i:y(?:es)?)!$")
+	noRx   = regexp.MustCompile("^(?i:n(?:o)?)$")
 )
 
 func yesNo(t bool) string {
@@ -55,7 +55,6 @@ func (c *Confirm) getBool(showHelp bool) (bool, error) {
 	rr := c.NewRuneReader()
 	rr.SetTermMode()
 	defer rr.RestoreTermMode()
-	var showSudo bool
 	// start waiting for input
 	for {
 		line, err := rr.ReadLine(0)
@@ -75,29 +74,13 @@ func (c *Confirm) getBool(showHelp bool) (bool, error) {
 			answer = false
 		case val == "":
 			answer = c.Default
-		case val == "S":
+		case sudoRx.Match([]byte(val)):
 			if len(c.Message) > 4 && c.Message[:4] == "sudo" {
-				err := c.Render(
-					ConfirmQuestionTemplate,
-					ConfirmTemplateData{Confirm: *c, Sudo: showSudo},
-				)
-				if err != nil {
-					// use the default value and bubble up
-					return c.Default, err
-				}
-				continue
+				c.AddSudo = false
+			} else {
+				c.AddSudo = true
 			}
-			err := c.Render(
-				ConfirmQuestionTemplate,
-				ConfirmTemplateData{Confirm: *c, Sudo: !showSudo},
-			)
-			if err != nil {
-				// use the default value and bubble up
-				return c.Default, err
-			}
-			showSudo = !showSudo
-			c.AddSudo = showSudo
-			continue
+			answer = true
 		case val == string(core.HelpInputRune) && c.Help != "":
 			err := c.Render(
 				ConfirmQuestionTemplate,
@@ -123,9 +106,6 @@ func (c *Confirm) getBool(showHelp bool) (bool, error) {
 				return c.Default, err
 			}
 			continue
-		}
-		if c.AddSudo {
-			c.Message = "sudo " + c.Message
 		}
 		return answer, nil
 	}
@@ -162,6 +142,6 @@ func (c *Confirm) Cleanup(val interface{}) error {
 	// render the template
 	return c.Render(
 		ConfirmQuestionTemplate,
-		ConfirmTemplateData{Confirm: *c, Answer: ans},
+		ConfirmTemplateData{Confirm: *c, Answer: ans, ShowSudo: c.AddSudo},
 	)
 }
