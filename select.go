@@ -4,6 +4,8 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/sahilm/fuzzy"
+
 	"gopkg.in/AlecAivazis/survey.v1/core"
 	"gopkg.in/AlecAivazis/survey.v1/terminal"
 )
@@ -158,13 +160,40 @@ func (s *Select) filterOptions() []string {
 	if filter == "" {
 		return s.Options
 	}
-	answer := []string{}
+	eMatches := make([]string, 0)
 	for _, o := range s.Options {
 		if strings.Contains(strings.ToLower(o), filter) {
-			answer = append(answer, o)
+			eMatches = append(eMatches, o)
 		}
 	}
-	return answer
+	fMatches := make([]string, 0)
+	matches := fuzzy.Find(filter, s.Options)
+	for _, m := range matches {
+		fMatches = append(fMatches, m.Str)
+	}
+	eMatches = append(eMatches, fMatches...)
+
+	return removeDuplicates(eMatches)
+}
+
+// removes duplicate entries from prompt.Suggest slice
+func removeDuplicates(elements []string) []string {
+	// Use map to record duplicates as we find them.
+	encountered := map[string]bool{}
+	result := []string{}
+
+	for v := range elements {
+		if encountered[elements[v]] == true {
+			// Do not add duplicate.
+		} else {
+			// Record this element as an encountered element.
+			encountered[elements[v]] = true
+			// Append to result slice.
+			result = append(result, elements[v])
+		}
+	}
+	// Return the new slice.
+	return result
 }
 
 func (s *Select) Prompt() (interface{}, error) {
