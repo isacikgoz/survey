@@ -3,6 +3,7 @@ package survey
 import (
 	"errors"
 	"strings"
+	"sync"
 
 	"github.com/sahilm/fuzzy"
 
@@ -156,22 +157,40 @@ func (s *Select) OnChange(line []rune, pos int, key rune) (newLine []rune, newPo
 }
 
 func (s *Select) filterOptions() []string {
+	var wg sync.WaitGroup
+
 	filter := strings.ToLower(s.filter)
 	if filter == "" {
 		return s.Options
 	}
+	if strings.HasSuffix(filter, "!") {
+		filter = filter[:len(filter)-1]
+	}
 	eMatches := make([]string, 0)
-	for _, o := range s.Options {
-		if strings.Contains(strings.ToLower(o), filter) {
-			eMatches = append(eMatches, o)
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for _, o := range s.Options {
+			if strings.Contains(strings.ToLower(o), filter) {
+				eMatches = append(eMatches, o)
+			}
 		}
+	}()
+	if strings.HasSuffix(s.filter, "!") {
+		wg.Wait()
+		return eMatches
 	}
 	fMatches := make([]string, 0)
-	matches := fuzzy.Find(filter, s.Options)
-	for _, m := range matches {
-		fMatches = append(fMatches, m.Str)
-	}
-	eMatches = append(eMatches, fMatches...)
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		matches := fuzzy.Find(filter, s.Options)
+		for _, m := range matches {
+			fMatches = append(fMatches, m.Str)
+		}
+		eMatches = append(eMatches, fMatches...)
+	}()
+	wg.Wait()
 
 	return removeDuplicates(eMatches)
 }
