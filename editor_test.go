@@ -11,8 +11,8 @@ import (
 
 	expect "github.com/Netflix/go-expect"
 	"github.com/stretchr/testify/assert"
-	"gopkg.in/AlecAivazis/survey.v1/core"
-	"gopkg.in/AlecAivazis/survey.v1/terminal"
+	"github.com/isacikgoz/survey/core"
+	"github.com/isacikgoz/survey/terminal"
 )
 
 func init() {

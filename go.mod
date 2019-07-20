@@ -15,5 +15,4 @@ require (
 	github.com/sahilm/fuzzy v0.1.0
 	github.com/stretchr/testify v1.2.1
 	golang.org/x/sys v0.0.0-20180606202747-9527bec2660b
-	gopkg.in/AlecAivazis/survey.v1 v1.8.5
 )
